@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Unit Converter</h1>
+        <div class="input-group">
+            <label for="category">Category:</label>
+            <select id="category">
+                <option value="length">Length</option>
+                <option value="weight">Weight</option>
+                <option value="temperature">Temperature</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="inputValue">Value:</label>
+            <input type="number" id="inputValue" step="any" placeholder="Enter value to convert">
+        </div>
+        <div class="input-group">
+            <label for="fromUnit">From:</label>
+            <select id="fromUnit"></select>
+        </div>
+        <div class="input-group">
+            <label for="toUnit">To:</label>
+            <select id="toUnit"></select>
+        </div>
+        <button onclick="convert()">Convert</button>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // TODO: Add more units like stone, nautical mile
+        // All the units we support - might need to split this into a separate file if it grows
+        const availableUnits = {
+            length: [
+                { name: 'Millimeter', value: 'mm' },
+                { name: 'Centimeter', value: 'cm' },
+                { name: 'Meter', value: 'm' },
+                { name: 'Kilometer', value: 'km' },
+                { name: 'Inch', value: 'in' },
+                { name: 'Foot', value: 'ft' },
+                { name: 'Yard', value: 'yd' },
+                { name: 'Mile', value: 'mi' } // US miles, not nautical
+            ],
+            weight: [
+                { name: 'Milligram', value: 'mg' },
+                { name: 'Gram', value: 'g' },
+                { name: 'Kilogram', value: 'kg' },
+                { name: 'Ounce', value: 'oz' }, // US ounces
+                { name: 'Pound', value: 'lb' }
+            ],
+            temperature: [
+                { name: 'Celsius', value: 'C' }, // The superior unit :)
+                { name: 'Fahrenheit', value: 'F' },
+                { name: 'Kelvin', value: 'K' }
+            ]
+        };
+
+        // Conversion factors (to base unit)
+        const conversionFactors = {
+            length: {
+                mm: 0.001,
+                cm: 0.01,
+                m: 1,
+                km: 1000,
+                in: 0.0254,
+                ft: 0.3048,
+                yd: 0.9144,
+                mi: 1609.344
+            },
+            weight: {
+                mg: 0.001,
+                g: 1,
+                kg: 1000,
+                oz: 28.3495,
+                lb: 453.592
+            }
+        };
+
+        // Populate unit dropdowns based on selected category
+        function populateUnits(category) {
+            const fromUnit = document.getElementById('fromUnit');
+            const toUnit = document.getElementById('toUnit');
+            fromUnit.innerHTML = '';
+            toUnit.innerHTML = '';
+            
+            // Add all available units for this category to both dropdowns
+            availableUnits[category].forEach(unit => {
+                fromUnit.innerHTML += `<option value="${unit.value}">${unit.name}</option>`;
+                toUnit.innerHTML += `<option value="${unit.value}">${unit.name}</option>`;
+            });
+        }
+
+        // Convert between units
+        function convert() {
+            const category = document.getElementById('category').value;
+            const value = parseFloat(document.getElementById('inputValue').value);
+            const fromUnit = document.getElementById('fromUnit').value;
+            const toUnit = document.getElementById('toUnit').value;
+
+            if (isNaN(value)) {
+                document.getElementById('result').textContent = 'Oops! That doesn\'t look like a number...';
+                return;
+            }
+
+            let result;
+            if (category === 'temperature') {
+                result = convertTemperature(value, fromUnit, toUnit);
+            } else {
+                const factors = conversionFactors[category];
+                // Convert to base unit then to target unit
+                const baseValue = value * factors[fromUnit];
+                result = baseValue / factors[toUnit];
+            }
+
+            document.getElementById('result').textContent = 
+                `${value} ${fromUnit} = ${result.toFixed(4)} ${toUnit}`;
+        }
+
+        // Temperature is tricky because it's not a simple multiplication
+        // Had to look up these formulas on Wikipedia :P
+        function convertTemperature(value, from, to) {
+            let celsius;
+            
+            // Convert to Celsius first
+            switch(from) {
+                case 'C': celsius = value; break;
+                case 'F': celsius = (value - 32) * 5/9; break;
+                case 'K': celsius = value - 273.15; break;
+            }
+
+            // Convert from Celsius to target unit
+            switch(to) {
+                case 'C': return celsius;
+                case 'F': return celsius * 9/5 + 32;
+                case 'K': return celsius + 273.15;
+            }
+        }
+
+        // Initialize the form
+        document.getElementById('category').addEventListener('change', function() {
+            populateUnits(this.value);
+        });
+
+        // Set initial units
+        populateUnits('length');
+    </script>
+</body>
+</html>
